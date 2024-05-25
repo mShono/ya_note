@@ -7,6 +7,7 @@ from notes.models import Note
 
 User = get_user_model()
 
+
 class TestRoutes(TestCase):
 
     @classmethod
@@ -43,17 +44,39 @@ class TestRoutes(TestCase):
                 response = self.client.get(url)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
-    def test_availability_for_notes(self):
-        users_statuses = (
+    def test_availability_logined_user(self):
+        user_status = (
             (self.author, HTTPStatus.OK),
+        )
+        for user, status in user_status:
+            # Логиним пользователя в клиенте:
+            self.client.force_login(user)
+            urls = (
+                ('notes:detail', (self.note.slug,)),
+                ('notes:edit', (self.note.slug,)),
+                ('notes:delete', (self.note.slug,)),
+                ('notes:add', None),
+                ('notes:list', None),
+            )
+            # Для каждой пары "пользователь - ожидаемый ответ"
+            # перебираем имена тестируемых страниц:
+            for name, args in urls:
+                with self.subTest(user=user, name=name):
+                    url = reverse(name, args=args)
+                    response = self.client.get(url)
+                    self.assertEqual(response.status_code, status)
+
+    def test_availability_logined_users(self):
+        user_status = (
             (self.reader, HTTPStatus.NOT_FOUND),
         )
-        for user, status in users_statuses:
+        for user, status in user_status:
             # Логиним пользователя в клиенте:
             self.client.force_login(user)
             urls = (
                 ('notes:edit', (self.note.slug,)),
                 ('notes:delete', (self.note.slug,)),
+                ('notes:detail', (self.note.slug,)),
             )
             # Для каждой пары "пользователь - ожидаемый ответ"
             # перебираем имена тестируемых страниц:
@@ -67,6 +90,8 @@ class TestRoutes(TestCase):
         # Сохраняем адрес страницы логина:
         login_url = reverse('users:login')
         urls = (
+            ('notes:edit', (self.note.slug,)),
+            ('notes:delete', (self.note.slug,)),
             ('notes:add', None),
             ('notes:detail', (self.note.slug,)),
             ('notes:list', None),
