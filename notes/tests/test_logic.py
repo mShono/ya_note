@@ -17,23 +17,27 @@ class TestCommentCreation(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create(username='Лев Толстой')
-        cls.note = Note.objects.create(
-            author=cls.user,
-            title='Заголовок',
-            text='Текст комментария',
-            slug='note_1',
-        )
+        # cls.note = Note.objects.create(
+        #     author=cls.user,
+        #     title='Заголовок',
+        #     text='Текст комментария',
+        #     slug='note_1',
+        # )
         # Адрес страницы с новостью.
-        cls.url = reverse('notes:detail', args=(cls.note.slug,))
+        # cls.url = reverse('notes:detail', args=(cls.note.slug,))
+        cls.url = reverse('notes:add')
         # Создаём пользователя и клиент, логинимся в клиенте.
-        cls.user_client = Client()
-        cls.user_client.force_login(cls.user)
+        cls.user = User.objects.create(username='Лев Толстой')
+        # cls.auth_client = Client()
+        # cls.auth_client.force_login(cls.user)
         # Данные для POST-запроса при создании комментария.
-        cls.form_data = {'text': cls.NOTE_TEXT}
+        cls.form_data = {
+            'title': 'Заголовок',
+            'text': 'Текст заметки',
+            'slug': 'note_1'
+        }
 
     def test_anonymous_user_cant_create_note(self):
-        # AssertionError: 1 != 0
         # Совершаем запрос от анонимного клиента, в POST-запросе отправляем
         # предварительно подготовленные данные формы с текстом комментария.
         self.client.post(self.url, data=self.form_data)
@@ -43,13 +47,12 @@ class TestCommentCreation(TestCase):
         self.assertEqual(notes_count, 0)
 
     def test_user_can_create_note(self):
-        # AssertionError: 405 != 302
         self.client.force_login(self.user)
         # Совершаем запрос через авторизованный клиент.
         response = self.client.post(self.url, data=self.form_data)
         # Проверяем, что редирект привёл к разделу с комментами.
-        list_url = reverse('notes:list')
-        redirect_url = f'{list_url}?next={self.url}'
+        redirect_url = reverse('notes:success')
+        # redirect_url = f'{list_url}?next={self.url}'
         self.assertRedirects(response, redirect_url)
         # Считаем количество комментариев.
         notes_count = Note.objects.count()
@@ -58,8 +61,9 @@ class TestCommentCreation(TestCase):
         # Получаем объект комментария из базы.
         note = Note.objects.get()
         # Проверяем, что все атрибуты комментария совпадают с ожидаемыми.
-        self.assertEqual(note.text, self.COMMENT_TEXT)
-        self.assertEqual(note.title, self.note.title)
+        self.assertEqual(note.text, self.form_data['text'])
+        self.assertEqual(note.title, self.form_data['title'])
+        self.assertEqual(note.slug, self.form_data['slug'])
         self.assertEqual(note.author, self.user)
 
 
